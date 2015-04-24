@@ -110,6 +110,3 @@ auc.knn = auc(predict.knn,label)
 AUC = c (auc.logic,auc.logic.lasso.cv,auc.randomforest,auc.tree,auc.knn)
 AUC.Value = data.frame(AUC)
 names(AUC.Value)=c("logistic regression","lasso logistic regression with cross validation", "random forest", "classification trees" ,"KNN")
-
-# http://www.r-bloggers.com/classification-trees/  
-# https://citizennet.com/blog/2012/11/10/random-forests-ensembles-and-performance-metrics/ # 
