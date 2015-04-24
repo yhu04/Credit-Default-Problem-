@@ -2,7 +2,8 @@ library(randomForest)
 library(glmnet)
 library(class)
 library(tree)
-library(pROC)
+library(ROCR)
+library(clusterSim)
 
 ###################
 # Import Data Set #
@@ -47,7 +48,6 @@ train = dataset[train_idx,]
 rownames(train) = NULL 
 test = dataset[-train_idx,-1]
 label = dataset[-train_idx,1]
-
 rownames(test) = NULL 
 
 ##################
@@ -55,7 +55,7 @@ rownames(test) = NULL
 ##################
 # We use the method of under sampling to solve the problem of imbalanced dataset. # 
 number = nrow(train[train[,1]==0,])
-under_sample_index = sample(1:number,0.75*number,replace=FALSE)
+under_sample_index = sample(1:number,0.2*number,replace=FALSE)
 train_neg = train[train[,1]==0,]
 train_pos = train[train[,1]==1,]
 train = rbind(train_neg[under_sample_index,],train_pos)
@@ -79,34 +79,32 @@ predict.logic = predict(train.logic, newdata=test,type="response")
 input = as.matrix(train[,2:11])
 output = as.matrix(train[,1])
 train.logic.lasso.cv = cv.glmnet(input,output,alpha=1,family='binomial')
-predict.logic.lasso.cv = predict(train.logic.lasso.cv, newdata=test,type="response")
+predict.logic.lasso.cv = predict(train.logic.lasso.cv, newx=as.matrix(test),type="response")
 
 ## random forest ##
 train.randomforest = randomForest(as.factor(SeriousDlqin2yrs)~., data = train, importance=TRUE, ntree=100)
-predict.randomforest = predict(train.randomforest, newdata=test,type="response")
+predict.randomforest = predict(train.randomforest, newdata=test,type="prob")
 
 ## classification tree ##
 train.tree = tree(formula=SeriousDlqin2yrs~., data = train)
 metric = cv.tree(train.tree)
 metric.best = metric$size[which.min(metric$dev)]
-train.tree.best= prune.misclass(train.tree , best = metric.best)
-predict.tree = predict(train.tree.best, newdata=test,type="response")
+train.tree.best= prune.tree(train.tree, best = metric.best)
+predict.tree = predict(train.tree.best, newdata=test)
 
 ## KNN ## 
-cl=factor(train[,1])
-predict.knn=knn.cv(train[,-1], test[,-1], cl, k = 10, prob=TRUE)
+cl = as.vector(train[,1])
+knn.train = data.Normalization(train[,-1],type="n1",normalization="column")
+knn.test = data.Normalization(test,type="n1",normalization="column")
+predict.knn=knn(knn.train, knn.test, cl, k = 10, prob=TRUE)
 
 ##########################
 # Performance Evaluation #
 ##########################
 
 # We use auc to evaluate the performace. #
-auc.logic = auc(predict.logic,label)
-auc.logic.lasso.cv = auc(predict.logic.lasso.cv,label)
-auc.randomforest = auc(predict.randomforest,label)
-auc.tree = auc(predict.tree,label)
-auc.knn = auc(predict.knn,label)
-
-AUC = c (auc.logic,auc.logic.lasso.cv,auc.randomforest,auc.tree,auc.knn)
-AUC.Value = data.frame(AUC)
-names(AUC.Value)=c("logistic regression","lasso logistic regression with cross validation", "random forest", "classification trees" ,"KNN")
+auc.logic = performance(prediction(predict.logic,label),"auc")
+auc.logic.lasso.cv = performance(prediction(predict.logic.lasso.cv,label),"auc")
+auc.randomforest = performance(prediction(predict.randomforest[,2],label),"auc")
+auc.tree = performance(prediction(predict.tree,label),"auc")
+auc.knn = performance(prediction(as.numeric(predict.knn),label),"auc")
