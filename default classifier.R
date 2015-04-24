@@ -108,3 +108,15 @@ auc.logic.lasso.cv = performance(prediction(predict.logic.lasso.cv,label),"auc")
 auc.randomforest = performance(prediction(predict.randomforest[,2],label),"auc")
 auc.tree = performance(prediction(predict.tree,label),"auc")
 auc.knn = performance(prediction(as.numeric(predict.knn),label),"auc")
+
+# We visualize the performance. # 
+
+plot(performance(prediction(predict.logic,label),"tpr", "fpr"),col="red")
+par(new = TRUE)
+plot(performance(prediction(predict.logic.lasso.cv,label),"tpr", "fpr"),col="yellow")
+par(new = TRUE)
+plot(performance(prediction(predict.randomforest[,2],label),"tpr", "fpr"),col="green")
+par(new = TRUE)
+plot(performance(prediction(predict.tree,label),"tpr", "fpr"),col="blue")
+par(new = TRUE)
+plot(performance(prediction(as.numeric(predict.knn),label),"tpr", "fpr"),col="purple")
